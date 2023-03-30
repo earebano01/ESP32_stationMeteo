@@ -286,16 +286,47 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 AsyncEventSource events("/events");
 
-JSONVar readings;
+// Init BME280
+void initBME(){
+    if (!bme.begin(0x76)) {
+    Serial.println("Could not find a valid BME280 sensor, check wiring!");
+    while (1);
+  }
+}
 
-String getSensorReadings(){
-  readings["tempC"] = String(bme.readTemperature());
-  readings["tempF"] = String(1.8 * bme.readTemperature() + 32);
-  readings["press"] =  String(bme.readPressure() / 100.0F);
-  readings["alt"] =  String(bme.readAltitude(SEALEVELPRESSURE_HPA));
-  readings["hum"] =  String(bme.readHumidity());
-  String jsonString = JSON.stringify(readings);
-  return jsonString;
+void getSensorReadings(){
+  temperature = bme.readTemperature();
+  // Convert temperature to Fahrenheit
+  //temperature = 1.8 * bme.readTemperature() + 32;
+  humidity = bme.readHumidity();
+  pressure = bme.readPressure()/ 100.0F;
+}
+
+// Initialize WiFi
+void initWiFi() {
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, password);
+    Serial.print("Connecting to WiFi ..");
+    while (WiFi.status() != WL_CONNECTED) {
+        Serial.print('.');
+        delay(1000);
+    }
+    Serial.println(WiFi.localIP());
+}
+
+String processor(const String& var){
+  getSensorReadings();
+  //Serial.println(var);
+  if(var == "TEMPERATURE"){
+    return String(temperature);
+  }
+  else if(var == "HUMIDITY"){
+    return String(humidity);
+  }
+  else if(var == "PRESSURE"){
+    return String(pressure);
+  }
+  return String();
 }
 
 const char index_html[] PROGMEM = R"rawliteral(
@@ -373,51 +404,36 @@ const char index_html[] PROGMEM = R"rawliteral(
             <td><span id="hum"></span></td>
         </tr> 
       <script>
-      window.addEventListener('load', getReadings);
-
-  function getReadings(){
-  var xhr = new XMLHttpRequest();
-  xhr.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      var myObj = JSON.parse(this.responseText);
-      console.log(myObj);
-      var tempC = myObj.tempC;
-      var tempF = myObj.tempF;
-      var press = myObj.press;
-      var alt = myObj.alt;
-      var hum = myObj.hum;
-      gaugeTemp.value = temp;
-      gaugeHum.value = hum;
-    }
-  }; 
-  xhr.open("GET", "/readings", true);
-  xhr.send();
-}
-
-if (!!window.EventSource) {
-  var source = new EventSource('/events');
-  
-  source.addEventListener('open', function(e) {
-    console.log("Events Connected");
-  }, false);
-
-  source.addEventListener('error', function(e) {
-    if (e.target.readyState != EventSource.OPEN) {
-      console.log("Events Disconnected");
-    }
-  }, false);
-  
-  source.addEventListener('message', function(e) {
-    console.log("message", e.data);
-  }, false);
-  
-  source.addEventListener('new_readings', function(e) {
-    console.log("new_readings", e.data);
-    var myObj = JSON.parse(e.data);
-    console.log(myObj);
-    gaugeTemp.value = myObj.temperature;
-    gaugeHum.value = myObj.humidity;
-  }, false);
+      if (!!window.EventSource) {
+ var source = new EventSource('/events');
+ 
+ source.addEventListener('open', function(e) {
+  console.log("Events Connected");
+ }, false);
+ source.addEventListener('error', function(e) {
+  if (e.target.readyState != EventSource.OPEN) {
+    console.log("Events Disconnected");
+  }
+ }, false);
+ 
+ source.addEventListener('message', function(e) {
+  console.log("message", e.data);
+ }, false);
+ 
+ source.addEventListener('temperature', function(e) {
+  console.log("temperature", e.data);
+  document.getElementById("temp").innerHTML = e.data;
+ }, false);
+ 
+ source.addEventListener('humidity', function(e) {
+  console.log("humidity", e.data);
+  document.getElementById("hum").innerHTML = e.data;
+ }, false);
+ 
+ source.addEventListener('pressure', function(e) {
+  console.log("pressure", e.data);
+  document.getElementById("pres").innerHTML = e.data;
+ }, false);
 }
 </script>
 </body>
@@ -428,43 +444,54 @@ void setup(void) {
   Serial.begin(9600);
 
   bool status;
-
+  initWiFi();
+  initBME();
   // default settings
   // (you can also pass in a Wire library object like &Wire2)
   //status = bme.begin();  
-  if (!bme.begin(0x76)) {
-    Serial.println("Could not find a valid BME280 sensor, check wiring!");
-    while (1);
-  }
+  // if (!bme.begin(0x76)) {
+  //   Serial.println("Could not find a valid BME280 sensor, check wiring!");
+  //   while (1);
+  // }
 
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  Serial.println("");
+  // WiFi.mode(WIFI_STA);
+  // WiFi.begin(ssid, password);
+  // Serial.println("");
 
-  // Wait for connection
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("");
-  Serial.print("Connected to ");
-  Serial.println(ssid);
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+  // // Wait for connection
+  // while (WiFi.status() != WL_CONNECTED) {
+  //   delay(500);
+  //   Serial.print(".");
+  // }
+  // Serial.println("");
+  // Serial.print("Connected to ");
+  // Serial.println(ssid);
+  // Serial.print("IP address: ");
+  // Serial.println(WiFi.localIP());
 
   // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
   //   request->send(200, "text/plain", "Hi! I am ESP32.");
   // });
 
+  // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+  //   request->send_P(200, "text/html", index_html);
+  // });
+
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send_P(200, "text/html", index_html);
+    request->send_P(200, "text/html", index_html, processor);
   });
 
-  server.on("/readings", HTTP_GET, [](AsyncWebServerRequest *request){
-    String json = getSensorReadings();
-    request->send(200, "application/json", json);
-    json = String();
+  // Handle Web Server Events
+  events.onConnect([](AsyncEventSourceClient *client){
+    if(client->lastId()){
+      Serial.printf("Client reconnected! Last message ID that it got is: %u\n", client->lastId());
+    }
+    // send event with message "hello!", id current millis
+    // and set reconnect delay to 1 second
+    client->send("hello!", NULL, millis(), 10000);
   });
+  server.addHandler(&events);
+  server.begin();
 
   AsyncElegantOTA.begin(&server);    // Start ElegantOTA
   server.begin();
@@ -472,13 +499,22 @@ void setup(void) {
 }
 
 void loop(void) {
-  printValues();
-  delay(delayTime);
+  // printValues();
+  // delay(delayTime);
 
   if ((millis() - lastTime) > timerDelay) {
-    // Send Events to the client with the Sensor Readings Every 10 seconds
+    getSensorReadings();
+    Serial.printf("Temperature = %.2f ºC \n", temperature);
+    Serial.printf("Humidity = %.2f \n", humidity);
+    Serial.printf("Pressure = %.2f hPa \n", pressure);
+    Serial.println();
+
+    // Send Events to the Web Client with the Sensor Readings
     events.send("ping",NULL,millis());
-    events.send(getSensorReadings().c_str(),"new_readings" ,millis());
+    events.send(String(temperature).c_str(),"temperature",millis());
+    events.send(String(humidity).c_str(),"humidity",millis());
+    events.send(String(pressure).c_str(),"pressure",millis());
+    
     lastTime = millis();
   }
 }
