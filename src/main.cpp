@@ -111,7 +111,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ESP Weather Station</title>
+    <title>ESP32 Station Meteo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="data:,">
     <style>
@@ -150,18 +150,18 @@ const char index_html[] PROGMEM = R"rawliteral(
     </style>
 </head>
 <body>
-    <h1>Projet Final - ESP32 Station Meteo</h1>
+    <h1>ESP32 Station Meteo</h1>
     <table>
         <tr>
             <th>MEASUREMENT</th>
             <th>VALUE</th>
         </tr>
         <tr>
-            <td>Temperature Celsius</td>
+            <td>Temperature (&#8451;)</td>
             <td><span id="tempC"></span></td>
         </tr>
         <tr>
-            <td>Temperature Fahrenheit</td>
+            <td>Temperature (&#8457;)</td>
             <td><span id="tempF"></span></td>
         </tr>
         <tr>
@@ -221,7 +221,7 @@ const char index_html[] PROGMEM = R"rawliteral(
       }
 </script>
 </body>
-</html>
+</html> 
 )rawliteral";
 
 void setup(void) {
