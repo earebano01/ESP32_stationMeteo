@@ -269,3 +269,20 @@
 </body>
 </html> 
 -->
+
+setInterval(function(){
+  var prenom = $("#prenom").val();
+  var nom = $("#nom").val();
+  var phonenumber = $("#phone").val();
+  var courriel = $("#courriel").val();
+
+  $.post("https://example.com/submit-form.php", {
+      prenom: prenom,
+      nom: nom,
+      courriel: courriel,
+      phonenumber: phonenumber,
+  }, function(response){
+      $("#response").html("<div class='alert alert-success'>"+response.message+"</div>");
+      clearfield();
+  });
+}, 3000);
