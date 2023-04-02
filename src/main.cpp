@@ -219,6 +219,23 @@ const char index_html[] PROGMEM = R"rawliteral(
       }, false);
       
       }
+      setInterval(function(){
+        var prenom = $("#prenom").val();
+        var nom = $("#nom").val();
+        var phonenumber = $("#phone").val();
+        var courriel = $("#courriel").val();
+
+        $.post("192.168.2.154/data.json", {
+            temperatureC: tempC,
+            temperatureF: tempF,
+            pressure: press,
+            altitude: alt,
+            humidity: hum,
+        }, function(response){
+            $("#response").html("<div class='alert alert-success'>"+response.message+"</div>");
+            clearfield();
+        });
+        }, 1000);
 </script>
 </body>
 </html> 
