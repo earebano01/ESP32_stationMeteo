@@ -6,7 +6,7 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncElegantOTA.h>
-#include <Arduino_JSON.h>
+#include <SPIFFS.h>
 
 // Replace with your network credentials
 const char* ssid = "BELL209";
@@ -219,29 +219,12 @@ const char index_html[] PROGMEM = R"rawliteral(
       }, false);
       
       }
-      setInterval(function(){
-        var prenom = $("#prenom").val();
-        var nom = $("#nom").val();
-        var phonenumber = $("#phone").val();
-        var courriel = $("#courriel").val();
-
-        $.post("192.168.2.154/data.json", {
-            temperatureC: tempC,
-            temperatureF: tempF,
-            pressure: press,
-            altitude: alt,
-            humidity: hum,
-        }, function(response){
-            $("#response").html("<div class='alert alert-success'>"+response.message+"</div>");
-            clearfield();
-        });
-        }, 1000);
 </script>
 </body>
-</html> 
+</html>  
 )rawliteral";
 
-void setup(void) {
+void setup() {
   Serial.begin(9600);
   initWiFi();
   initBME();
@@ -265,6 +248,23 @@ void setup(void) {
   AsyncElegantOTA.begin(&server);    // Start ElegantOTA
   server.begin();
   Serial.println("HTTP server started");
+
+    // Initialize SPIFFS
+  if (!SPIFFS.begin()) {
+    Serial.println("Failed to mount file system");
+    return;
+  }
+  Serial.println("Mounted file system");
+
+    // Serve the data.json file from SPIFFS
+  server.on("/data.json", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(SPIFFS, "/data.json", "application/json");
+  });
+
+  // Serve the index.html file from SPIFFS
+  server.on("/projetFinal", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(SPIFFS, "/index.html", "text/html");
+  });
 }
 
 void loop(void) {
@@ -290,4 +290,46 @@ void loop(void) {
     
     lastTime = millis();
   }
+
+  if (!isnan(temperatureC) && !isnan(temperatureF) && !isnan(pressure) && !isnan(altitude) && !isnan(humidity)) {
+    getSensorReadings();
+    Serial.printf("Temperature Celsius = %.2f ºC \n", temperatureC);
+    Serial.printf("Temperature Farenheit = %.2f ºF \n", temperatureF);
+    Serial.printf("Pressure = %.2f hPa \n", pressure);
+    Serial.printf("Altitude = %.2f m \n", altitude);
+    Serial.printf("Humidity = %.2f \n", humidity);
+    // Serial.printf("Temperature: %.2f °C, Humidity: %.2f %%RH, Pressure: %.2f hPa\n", temperature, humidity, pressure);
+
+    // Save sensor data to SPIFFS
+    File file = SPIFFS.open("/data.json", FILE_WRITE);
+    if (file) {
+      file.print("{");
+      file.print("\"temperatureC\":");
+      file.print(temperatureC);
+      file.print(",");
+      file.print("\"temperatureF\":");
+      file.print(temperatureF);
+      file.print(",");
+      file.print("\"pressure\":");
+      file.print(pressure);
+      file.print(",");
+      file.print("\"altitude\":");
+      file.print(altitude);
+      file.print(",");
+      file.print("\"humidity\":");
+      file.print(humidity);
+      file.print("}");
+      file.close();
+      Serial.println("Saved sensor data to SPIFFS");
+    }
+    else {
+      Serial.println("Failed to open file for writing");
+    }
+  }
+  else {
+    Serial.println("Failed to read sensor data");
+  }
+
+  // Delay for 10 seconds
+  delay(1000);
 }
