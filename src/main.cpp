@@ -1,3 +1,17 @@
+/*
+Titre : Projet Final
+Auteur: Adonis Rebano
+Date : 05/04/2023
+Description : Creation d'un objet intelligent avec une page web affichant les informations et envoi 
+              des données en utilisant JSON
+Version : 0.0.1
+
+Notes :
+
+Ressources : https://randomnerdtutorials.com/esp32-ota-over-the-air-vs-code/
+*/
+
+/*-----on faire notre declaration pour la librairie dont on besoin dans notre projet-----*/
 #include <Arduino.h>
 #include <WiFi.h>
 #include <Wire.h>
@@ -8,28 +22,33 @@
 #include <AsyncElegantOTA.h>
 #include <SPIFFS.h>
 
-// Replace with your network credentials
-// const char* ssid = "BELL209";
-// const char* password = "65E14F2C5217";
+#define SEALEVELPRESSURE_HPA (1013.25)          /* On utilise cette variable pour estimer l'altitude 
+                                                   à partir d'une pression donnée en la comparant à 
+                                                   la pression au niveau de la mer. */
 
-const char* ssid = "UNIFI_IDO1";
-const char* password = "42Bidules!";
+/*-----on definit notre SSID et notre mot de passe------*/
+const char* ssid = "BELL209";
+const char* password = "65E14F2C5217";
 
-unsigned long delayTime;
+// const char* ssid = "UNIFI_IDO1";
+// const char* password = "42Bidules!";
 
+/*-----on definit le delai different qu'on utilise dans notre projet*/
+unsigned long delayTime;              
 unsigned long lastTime = 0;
 unsigned long timerDelay = 500;
 
-#define SEALEVELPRESSURE_HPA (1013.25)
+Adafruit_BME280 bme;                             /* Puisqu'on utilise I2C, on a juste besoin de créer 
+                                                    une classe et un objet */
 
-Adafruit_BME280 bme; // I2C
-
+/*-----on definit nos variables-----*/
 float temperatureC;
 float temperatureF;
 float pressure;
 float altitude;
 float humidity;
 
+/*-----on creé une fonctionne pour afficher des données sur le moniteur série-----*/
 void printValues() {
   Serial.print("Temperature = ");
   Serial.print(bme.readTemperature());
@@ -55,10 +74,10 @@ void printValues() {
   delayTime = 3000;
 }
 
-AsyncWebServer server(80);
-AsyncEventSource events("/events");
+AsyncWebServer server(80);                      // on crée une AsyncWebServer objet sur le port 80
+AsyncEventSource events("/events");             // on crée une AsyncEventSource sur /events 
 
-// Init BME280
+/*-----on crée une fonctionne pour initialiser notre BME-----*/
 void initBME(){
     if (!bme.begin(0x76)) {
     Serial.println("Could not find a valid BME280 sensor, check wiring!");
@@ -66,6 +85,7 @@ void initBME(){
   }
 }
 
+/*-----on crée une fonctionne pour obtenir des valeurs dans notre BME-----*/
 void getSensorReadings(){
   temperatureC = bme.readTemperature();
   temperatureF = 1.8 * bme.readTemperature() + 32;
@@ -74,7 +94,7 @@ void getSensorReadings(){
   humidity = bme.readHumidity();
 }
 
-// Initialize WiFi
+/*-----on crée une fonctionne pour initialiser notre WiFi-----*/
 void initWiFi() {
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
@@ -86,27 +106,7 @@ void initWiFi() {
     Serial.println(WiFi.localIP());
 }
 
-String processor(const String& var){
-  getSensorReadings();
-  //Serial.println(var);
-  if(var == "TEMPERATUREC"){
-    return String(temperatureC);
-  }
-  else if(var == "TEMPERATUREF"){
-    return String(temperatureF);
-  }
-  else if(var == "PRESSURE"){
-    return String(pressure);
-  }
-  else if(var == "ALTITUDE"){
-    return String(altitude);
-  }
-  else if(var == "HUMIDITY"){
-    return String(humidity);
-  }
-  return String();
-}
-
+/*-----on crée la base pour notre HTML qui on peut modifier par l'OTA-----*/
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
@@ -225,58 +225,52 @@ const char index_html[] PROGMEM = R"rawliteral(
 )rawliteral";
 
 void setup() {
-  Serial.begin(9600);
-  initWiFi();
-  initBME();
+  Serial.begin(9600);                           //  on fait notre initialisation pour le moniteur série,
+  initWiFi();                                   //  notre WiFi
+  initBME();                                    //  et BME280
 
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send_P(200, "text/html", index_html, processor);
+  // on gére les demandes des clients et on servir la page web sur la racine /
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send_P(200, "text/html", index_html);
   });
 
-  // Handle Web Server Events
+  // on gére des événements du serveur Web
   events.onConnect([](AsyncEventSourceClient *client){
     if(client->lastId()){
       Serial.printf("Client reconnected! Last message ID that it got is: %u\n", client->lastId());
     }
-    // send event with message "hello!", id current millis
-    // and set reconnect delay to 1 second
+    /* ensuite, on envoie un événement avec le message "hello !", l'ID de l'heure actuelle et définir 
+       le délai de reconnexion à 1 seconde. */
     client->send("hello!", NULL, millis(), 10000);
   });
-  server.addHandler(&events);
-  server.begin();
 
-  AsyncElegantOTA.begin(&server);    // Start ElegantOTA
-  server.begin();
+  AsyncElegantOTA.begin(&server);               // on demarre ElegantOTA, le serveur et notre handler
+  server.begin();                               // pour l'événement
+  server.addHandler(&events);                   
+
   Serial.println("HTTP server started");
 
-    // Initialize SPIFFS
+  // on initialise notre SPIFFS
   if (!SPIFFS.begin()) {
     Serial.println("Failed to mount file system");
     return;
   }
   Serial.println("Mounted file system");
 
-    // Serve the data.json file from SPIFFS
+  // on servi des donnees JSON du SPIFFS et on peut acceder des donnes actuelle sur /data.json
   server.on("/data.json", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(SPIFFS, "/data.json", "application/json");
   });
 
 }
 
-void loop(void) {
-  // printValues();
-  // delay(delayTime);
+void loop() {
 
   if ((millis() - lastTime) > timerDelay) {
     getSensorReadings();
-    Serial.printf("Temperature Celsius = %.2f ºC \n", temperatureC);
-    Serial.printf("Temperature Farenheit = %.2f ºF \n", temperatureF);
-    Serial.printf("Pressure = %.2f hPa \n", pressure);
-    Serial.printf("Altitude = %.2f m \n", altitude);
-    Serial.printf("Humidity = %.2f \n", humidity);
     Serial.println();
 
-    // Send Events to the Web Client with the Sensor Readings
+    // on envoie des événements au client Web avec les lectures des capteurs getSensorReadiongs();.
     events.send("ping",NULL,millis());
     events.send(String(temperatureC).c_str(),"temperatureC",millis());
     events.send(String(temperatureF).c_str(),"temperatureF",millis());
@@ -288,15 +282,9 @@ void loop(void) {
   }
 
   if (!isnan(temperatureC) && !isnan(temperatureF) && !isnan(pressure) && !isnan(altitude) && !isnan(humidity)) {
-    getSensorReadings();
-    Serial.printf("Temperature Celsius = %.2f ºC \n", temperatureC);
-    Serial.printf("Temperature Farenheit = %.2f ºF \n", temperatureF);
-    Serial.printf("Pressure = %.2f hPa \n", pressure);
-    Serial.printf("Altitude = %.2f m \n", altitude);
-    Serial.printf("Humidity = %.2f \n", humidity);
-    // Serial.printf("Temperature: %.2f °C, Humidity: %.2f %%RH, Pressure: %.2f hPa\n", temperature, humidity, pressure);
-
-    // Save sensor data to SPIFFS
+    printValues();
+    
+    // on enregistre les données des capteurs sur la mémoire SPIFFS dans le dossier qu'on a crée /data
     File file = SPIFFS.open("/data.json", FILE_WRITE);
     if (file) {
       file.print("{");
@@ -326,6 +314,6 @@ void loop(void) {
     Serial.println("Failed to read sensor data");
   }
 
-  // Delay for 10 seconds
+  // on ajoute un delai d'un second
   delay(1000);
 }
