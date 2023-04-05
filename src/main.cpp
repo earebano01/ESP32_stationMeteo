@@ -9,11 +9,11 @@
 #include <SPIFFS.h>
 
 // Replace with your network credentials
-const char* ssid = "BELL209";
-const char* password = "65E14F2C5217";
+// const char* ssid = "BELL209";
+// const char* password = "65E14F2C5217";
 
-// const char* ssid = "UNIFI_IDO1";
-// const char* password = "42Bidules!";
+const char* ssid = "UNIFI_IDO1";
+const char* password = "42Bidules!";
 
 unsigned long delayTime;
 
@@ -221,7 +221,7 @@ const char index_html[] PROGMEM = R"rawliteral(
       }
 </script>
 </body>
-</html>  
+</html>   
 )rawliteral";
 
 void setup() {
@@ -261,10 +261,6 @@ void setup() {
     request->send(SPIFFS, "/data.json", "application/json");
   });
 
-  // Serve the index.html file from SPIFFS
-  server.on("/projetFinal", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(SPIFFS, "/index.html", "text/html");
-  });
 }
 
 void loop(void) {
