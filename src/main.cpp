@@ -1,7 +1,7 @@
 /*
 Titre : Projet Final
 Auteur: Adonis Rebano
-Date : 05/04/2023
+Date : 06/04/2023
 Description : Creation d'un objet intelligent avec une page web affichant les informations et envoi 
               des données en utilisant JSON
 Version : 0.0.1
@@ -267,7 +267,7 @@ void loop() {
     getSensorReadings();
     Serial.println();
 
-    // on envoie des événements au client Web avec les lectures des capteurs getSensorReadiongs();.
+    // on envoie des événements au client Web avec les lectures des capteurs getSensorReadings();.
     events.send("ping",NULL,millis());
     events.send(String(temperatureC).c_str(),"temperatureC",millis());
     events.send(String(temperatureF).c_str(),"temperatureF",millis());
