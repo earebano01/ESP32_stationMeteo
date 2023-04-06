@@ -118,7 +118,7 @@ const char index_html[] PROGMEM = R"rawliteral(
         }
         table {
             border-collapse: collapse;
-            width: 35%;
+            width: 55%;
             margin-left: auto;
             margin-right: auto;
         }
@@ -150,28 +150,32 @@ const char index_html[] PROGMEM = R"rawliteral(
     <h1>ESP32 Station Meteo</h1>
     <table>
         <tr>
-            <th>MEASUREMENT</th>
-            <th>VALUE</th>
+            <th colspan="3" style="text-align:center">MEASUREMENT VALUE</th>
         </tr>
         <tr>
             <td>Temperature (&#8451;)</td>
             <td><span id="tempC"></span></td>
+            <td><strong>&#8451;</strong></td>
         </tr>
         <tr>
             <td>Temperature (&#8457;)</td>
             <td><span id="tempF"></span></td>
+            <td><strong>&#8457;</strong></td>
         </tr>
         <tr>
             <td>Pressure</td>
             <td><span id="press"></span></td>
+            <td><strong>hPa</strong></td>
         </tr>
         <tr>
             <td>Altitude</td>
             <td><span id="alt"></span></td>
+            <td><strong>m</strong></td>
         </tr>
         <tr>
             <td>Humidity</td>
             <td><span id="hum"></span></td>
+            <td><strong>%</strong></td>
         </tr> 
       <script>
       if (!!window.EventSource) {
@@ -218,7 +222,7 @@ const char index_html[] PROGMEM = R"rawliteral(
       }
 </script>
 </body>
-</html>   
+</html>  
 )rawliteral";
 
 void setup() {
