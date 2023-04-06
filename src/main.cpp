@@ -6,6 +6,9 @@ Description : Creation d'un objet intelligent avec une page web affichant les in
               des données en utilisant JSON
 Version : 0.0.1
 
+Notes :
+
+Ressources : https://randomnerdtutorials.com/esp32-ota-over-the-air-vs-code/
 */
 
 /*-----on faire notre declaration pour la librairie dont on besoin dans notre projet-----*/
@@ -240,8 +243,9 @@ void setup() {
     if(client->lastId()){
       Serial.printf("Client reconnected! Last message ID that it got is: %u\n", client->lastId());
     }
-    /* ensuite, on envoie un événement avec le message "hello !", l'ID de l'heure actuelle et définir 
-       le délai de reconnexion à 1 seconde. */
+  
+  /* ensuite, on envoie un événement avec le message "hello !", l'ID de l'heure actuelle et définir 
+     le délai de reconnexion à 1 seconde. */
     client->send("hello!", NULL, millis(), 10000);
   });
 
@@ -315,6 +319,6 @@ void loop() {
     Serial.println("Failed to read sensor data");
   }
 
-  // on ajoute un delai d'un second
+  // on ajoute un delai d'une seconde
   delay(1000);
 }
