@@ -6,9 +6,6 @@ Description : Creation d'un objet intelligent avec une page web affichant les in
               des données en utilisant JSON
 Version : 0.0.1
 
-Notes :
-
-Ressources : https://randomnerdtutorials.com/esp32-ota-over-the-air-vs-code/
 */
 
 /*-----on faire notre declaration pour la librairie dont on besoin dans notre projet-----*/
